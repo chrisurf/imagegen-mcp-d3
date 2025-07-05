@@ -9,7 +9,7 @@ import {
   ListToolsRequestSchema,
   McpError,
 } from '@modelcontextprotocol/sdk/types.js';
-import { writeFile, mkdir } from 'fs/promises';
+import { writeFile, mkdir, stat } from 'fs/promises';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
@@ -42,14 +42,16 @@ export class DallE3MCPServer {
       },
       {
         capabilities: {
-          tools: {},
+          tools: {
+            available: true,
+          },
         },
       }
     );
 
     this.setupToolHandlers();
     this.setupInitializeHandler();
-    
+
     // Error handling
     this.server.onerror = (error: Error) => console.error('[MCP Error]', error);
     process.on('SIGINT', async () => {
@@ -108,10 +110,7 @@ export class DallE3MCPServer {
       if (name === 'generate_image') {
         return await this.generateImage(args as unknown as GenerateImageArgs);
       } else {
-        throw new McpError(
-          ErrorCode.MethodNotFound,
-          `Unknown tool: ${name}`
-        );
+        throw new McpError(ErrorCode.MethodNotFound, `Unknown tool: ${name}`);
       }
     });
   }
@@ -122,17 +121,18 @@ export class DallE3MCPServer {
       console.error('[DALL-E 3 MCP Server] Client info:', JSON.stringify(request.params.clientInfo, null, 2));
       console.error('[DALL-E 3 MCP Server] Protocol version requested:', request.params.protocolVersion);
 
-      // Return the server's capabilities and information
       return {
         protocolVersion: '2024-11-05',
         capabilities: {
-          tools: {},
+          tools: {
+            available: true,
+          },
         },
         serverInfo: {
           name: 'dall-e-3-mcp-server',
           version: '1.0.0',
         },
-        instructions: 'This server provides DALL-E 3 image generation capabilities. Use the generate_image tool to create images from text prompts.',
+        instructions: 'Use the "generate_image" tool to generate images using a DALL·E 3 prompt.',
       };
     });
   }
@@ -143,29 +143,20 @@ export class DallE3MCPServer {
       output_path,
       size = '1024x1024',
       quality = 'hd',
-      style = 'vivid'
+      style = 'vivid',
     } = args;
 
     if (!prompt) {
-      throw new McpError(
-        ErrorCode.InvalidParams,
-        'Missing required parameter: prompt'
-      );
+      throw new McpError(ErrorCode.InvalidParams, 'Missing required parameter: prompt');
     }
 
     if (!output_path) {
-      throw new McpError(
-        ErrorCode.InvalidParams,
-        'Missing required parameter: output_path'
-      );
+      throw new McpError(ErrorCode.InvalidParams, 'Missing required parameter: output_path');
     }
 
     const apiKey = process.env.OPENAI_API_KEY;
     if (!apiKey) {
-      throw new McpError(
-        ErrorCode.InternalError,
-        'OPENAI_API_KEY environment variable not set'
-      );
+      throw new McpError(ErrorCode.InternalError, 'OPENAI_API_KEY environment variable not set');
     }
 
     try {
@@ -176,78 +167,60 @@ export class DallE3MCPServer {
       const response = await fetch('https://api.openai.com/v1/images/generations', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${apiKey}`,
+          Authorization: `Bearer ${apiKey}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           model: 'dall-e-3',
-          prompt: prompt,
+          prompt,
           n: 1,
-          size: size,
-          quality: quality,
-          style: style
+          size,
+          quality,
+          style,
         }),
       });
 
       if (!response.ok) {
         const errorText = await response.text();
         console.error('[DALL-E 3] API Error:', errorText);
-        throw new McpError(
-          ErrorCode.InternalError,
-          `OpenAI API error: ${response.status} ${response.statusText} - ${errorText}`
-        );
+        throw new McpError(ErrorCode.InternalError, `OpenAI API error: ${response.status} ${response.statusText} - ${errorText}`);
       }
 
-      const data = await response.json() as OpenAIImageResponse;
+      const data = (await response.json()) as OpenAIImageResponse;
       const imageUrl = data.data[0]?.url;
       const revisedPrompt = data.data[0]?.revised_prompt;
 
       if (!imageUrl) {
-        throw new McpError(
-          ErrorCode.InternalError,
-          'No image URL returned from OpenAI API'
-        );
+        throw new McpError(ErrorCode.InternalError, 'No image URL returned from OpenAI API');
       }
 
       console.error('[DALL-E 3] Generated image URL:', imageUrl);
       console.error('[DALL-E 3] Revised prompt:', revisedPrompt);
 
-      // Download the image
       const imageResponse = await fetch(imageUrl);
       if (!imageResponse.ok) {
-        throw new McpError(
-          ErrorCode.InternalError,
-          `Failed to download image: ${imageResponse.status} ${imageResponse.statusText}`
-        );
+        throw new McpError(ErrorCode.InternalError, `Failed to download image: ${imageResponse.status} ${imageResponse.statusText}`);
       }
 
       const imageBuffer = await imageResponse.arrayBuffer();
 
-      // Handle directory-only paths by generating a filename
       let finalOutputPath = output_path;
-      const stats = await import('fs').then(fs => fs.promises.stat(output_path).catch(() => null));
-      
+      const stats = await stat(output_path).catch(() => null);
+
       if (stats?.isDirectory() || output_path.endsWith('/') || output_path.endsWith('\\')) {
-        // Generate a unique filename based on timestamp and prompt
         const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-        const promptSlug = prompt.toLowerCase()
-          .replace(/[^a-z0-9]+/g, '-')
-          .replace(/^-+|-+$/g, '')
-          .substring(0, 50);
+        const promptSlug = prompt.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').substring(0, 50);
         const filename = `dalle3-${promptSlug}-${timestamp}.png`;
         finalOutputPath = path.join(output_path, filename);
         console.error(`[DALL-E 3] Directory detected, using filename: ${filename}`);
       }
 
-      // Ensure directory exists
       const outputDir = path.dirname(finalOutputPath);
       await mkdir(outputDir, { recursive: true });
-
-      // Save to file
       await writeFile(finalOutputPath, Buffer.from(imageBuffer));
 
       const imageSizeKB = Math.round(imageBuffer.byteLength / 1024);
-      
+
       console.error(`[DALL-E 3] ✅ Image saved successfully to: ${finalOutputPath}`);
       console.error(`[DALL-E 3] 📏 Image size: ${imageSizeKB} KB`);
 
@@ -272,13 +245,8 @@ The image has been saved to your specified location and is ready to use.`,
       };
     } catch (error) {
       console.error('[DALL-E 3] Error:', error);
-      if (error instanceof McpError) {
-        throw error;
-      }
-      throw new McpError(
-        ErrorCode.InternalError,
-        `Failed to generate image: ${error instanceof Error ? error.message : 'Unknown error'}`
-      );
+      if (error instanceof McpError) throw error;
+      throw new McpError(ErrorCode.InternalError, `Failed to generate image: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 
