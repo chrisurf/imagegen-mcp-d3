@@ -1,6 +1,6 @@
 {
   "name": "@chrisurf/imagegen-mcp-d3",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "Model Context Protocol server for DALL-E 3 image generation",
   "type": "module",
   "main": "dist/index.js",
