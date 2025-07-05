@@ -1,0 +1,70 @@
+{
+  "name": "imagegen-mcp-d3",
+  "version": "1.0.0",
+  "description": "Model Context Protocol server for DALL-E 3 image generation",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "imagegen-mcp-d3": "./dist/index.js"
+  },
+  "files": [
+    "dist/**/*",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx src/index.ts",
+    "start": "node dist/index.js",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "lint": "eslint src/**/*.ts",
+    "lint:fix": "eslint src/**/*.ts --fix",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist",
+    "prepublishOnly": "npm run clean && npm run build && npm test",
+    "format": "prettier --write src/**/*.ts",
+    "format:check": "prettier --check src/**/*.ts"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "dall-e",
+    "dall-e-3",
+    "openai",
+    "image-generation",
+    "ai",
+    "llm"
+  ],
+  "author": "chrisurf",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/chrisurf/imagegen-mcp-d3.git"
+  },
+  "bugs": {
+    "url": "https://github.com/chrisurf/imagegen-mcp-d3/issues"
+  },
+  "homepage": "https://github.com/chrisurf/imagegen-mcp-d3#readme",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.4"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.13",
+    "@types/node": "^22.10.2",
+    "@typescript-eslint/eslint-plugin": "^8.18.2",
+    "@typescript-eslint/parser": "^8.18.2",
+    "eslint": "^9.18.0",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-plugin-prettier": "^5.2.1",
+    "jest": "^29.7.0",
+    "prettier": "^3.4.2",
+    "ts-jest": "^29.2.5",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  }
+}
