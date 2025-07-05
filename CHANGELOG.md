@@ -44,3 +44,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### FIX
 
 - Add initialize method
+
+## [1.0.4] - 2025-07-05
+
+### FIX
+
+- Added capabilities.tools: { available: true } for proper protocol discovery
+- Switched to static fs/promises import for file operations
+- Implemented getMetadata() for better compatibility with VS Code Copilot and Inspector
+- General cleanup and reliability improvements
