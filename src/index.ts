@@ -146,9 +146,9 @@ export class DallE3MCPServer {
     }
 
     try {
-      console.log('[DALL-E 3] Starting image generation...');
-      console.log('[DALL-E 3] Prompt:', prompt);
-      console.log('[DALL-E 3] Output path:', output_path);
+      console.error('[DALL-E 3] Starting image generation...');
+      console.error('[DALL-E 3] Prompt:', prompt);
+      console.error('[DALL-E 3] Output path:', output_path);
 
       const response = await fetch('https://api.openai.com/v1/images/generations', {
         method: 'POST',
@@ -186,8 +186,8 @@ export class DallE3MCPServer {
         );
       }
 
-      console.log('[DALL-E 3] Generated image URL:', imageUrl);
-      console.log('[DALL-E 3] Revised prompt:', revisedPrompt);
+      console.error('[DALL-E 3] Generated image URL:', imageUrl);
+      console.error('[DALL-E 3] Revised prompt:', revisedPrompt);
 
       // Download the image
       const imageResponse = await fetch(imageUrl);
@@ -200,17 +200,33 @@ export class DallE3MCPServer {
 
       const imageBuffer = await imageResponse.arrayBuffer();
 
+      // Handle directory-only paths by generating a filename
+      let finalOutputPath = output_path;
+      const stats = await import('fs').then(fs => fs.promises.stat(output_path).catch(() => null));
+      
+      if (stats?.isDirectory() || output_path.endsWith('/') || output_path.endsWith('\\')) {
+        // Generate a unique filename based on timestamp and prompt
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+        const promptSlug = prompt.toLowerCase()
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/^-+|-+$/g, '')
+          .substring(0, 50);
+        const filename = `dalle3-${promptSlug}-${timestamp}.png`;
+        finalOutputPath = path.join(output_path, filename);
+        console.error(`[DALL-E 3] Directory detected, using filename: ${filename}`);
+      }
+
       // Ensure directory exists
-      const outputDir = path.dirname(output_path);
+      const outputDir = path.dirname(finalOutputPath);
       await mkdir(outputDir, { recursive: true });
 
       // Save to file
-      await writeFile(output_path, Buffer.from(imageBuffer));
+      await writeFile(finalOutputPath, Buffer.from(imageBuffer));
 
       const imageSizeKB = Math.round(imageBuffer.byteLength / 1024);
       
-      console.log(`[DALL-E 3] ✅ Image saved successfully to: ${output_path}`);
-      console.log(`[DALL-E 3] 📏 Image size: ${imageSizeKB} KB`);
+      console.error(`[DALL-E 3] ✅ Image saved successfully to: ${finalOutputPath}`);
+      console.error(`[DALL-E 3] 📏 Image size: ${imageSizeKB} KB`);
 
       return {
         content: [
@@ -221,7 +237,7 @@ export class DallE3MCPServer {
 **Original Prompt:** ${prompt}
 **Revised Prompt:** ${revisedPrompt || 'N/A'}
 **Image URL:** ${imageUrl}
-**Saved to:** ${output_path}
+**Saved to:** ${finalOutputPath}
 **Size:** ${size}
 **Quality:** ${quality}
 **Style:** ${style}
