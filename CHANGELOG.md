@@ -31,3 +31,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Comprehensive logging and error handling
 - NPM package publishing
 - GitHub Actions CI/CD pipeline
+
+## [1.0.2] - 2025-07-05
+
+### FIX
+
+- Update npm project @chrisurf/imagegen-mcp-d3
+- fix pipeline
+
+## [1.0.3] - 2025-07-05
+
+### FIX
+
+- Add initialize method

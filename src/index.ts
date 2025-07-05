@@ -5,6 +5,7 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import {
   CallToolRequestSchema,
   ErrorCode,
+  InitializeRequestSchema,
   ListToolsRequestSchema,
   McpError,
 } from '@modelcontextprotocol/sdk/types.js';
@@ -47,6 +48,7 @@ export class DallE3MCPServer {
     );
 
     this.setupToolHandlers();
+    this.setupInitializeHandler();
     
     // Error handling
     this.server.onerror = (error: Error) => console.error('[MCP Error]', error);
@@ -111,6 +113,27 @@ export class DallE3MCPServer {
           `Unknown tool: ${name}`
         );
       }
+    });
+  }
+
+  private setupInitializeHandler(): void {
+    this.server.setRequestHandler(InitializeRequestSchema, async (request) => {
+      console.error('[DALL-E 3 MCP Server] Initialize request received from client');
+      console.error('[DALL-E 3 MCP Server] Client info:', JSON.stringify(request.params.clientInfo, null, 2));
+      console.error('[DALL-E 3 MCP Server] Protocol version requested:', request.params.protocolVersion);
+
+      // Return the server's capabilities and information
+      return {
+        protocolVersion: '2024-11-05',
+        capabilities: {
+          tools: {},
+        },
+        serverInfo: {
+          name: 'dall-e-3-mcp-server',
+          version: '1.0.0',
+        },
+        instructions: 'This server provides DALL-E 3 image generation capabilities. Use the generate_image tool to create images from text prompts.',
+      };
     });
   }
 
