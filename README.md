@@ -73,7 +73,10 @@ Add this server to your Claude Desktop configuration:
   "mcpServers": {
     "imagegen-mcp-d3": {
       "command": "npx",
-      "args": ["imagegen-mcp-d3"],
+      "args": [
+        "-y",
+        "imagegen-mcp-d3"
+        ],
       "env": {
         "OPENAI_API_KEY": "your-openai-api-key-here"
       }
